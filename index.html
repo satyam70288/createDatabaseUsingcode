@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Table Example</title>
+</head>
+<link rel="stylesheet" href="styles.css">
+<body>
+  <div class="container">
+    <h1>Create Table</h1>
+    <button onclick="showTableForm()">Create Table</button>
+
+    <div id="createTableForm" style="display: none;">
+      <div class="form-group">
+        <label for="tableName">Table Name</label>
+        <input type="text" id="tableName" placeholder="Enter table name">
+      </div>
+
+      <div id="fieldsContainer">
+        <div class="form-group">
+          <label for="fieldName1">Field 1 Name</label>
+          <input type="text" class="fieldName" id="fieldName1" placeholder="Enter field name">
+          
+          <label for="fieldType1">Field 1 Type</label>
+          <input type="text" class="fieldType" id="fieldType1" placeholder="Enter type">
+        </div>
+      </div>
+
+      <button onclick="addField()">Add More Fields</button>
+      <button onclick="createTable()">Create Table</button>
+      <button onclick="cancelCreateTable()">Cancel</button>
+    </div>
+
+    <div id="tableContainer" class="table-container">
+        <h1>Tables</h1>
+        <ul id="tablesList"></ul> <!-- Display tables as an unordered list -->
+    </div>
+  </div>
+
+  <script>
+    let fieldCount = 1;
+
+    // Fetch tables when the page is loaded
+    document.addEventListener('DOMContentLoaded', fetchTables);
+
+    // Function to fetch all tables from the API
+    async function fetchTables() {
+      try {
+        const getTablesResponse = await fetch('http://localhost:3000/table/get');
+        if (getTablesResponse.ok) {
+          const tablesData = await getTablesResponse.json();
+          const tables = tablesData.tables; // Assuming 'tables' is the key in the response
+          
+          // Clear existing tables list
+          const tablesList = document.getElementById('tablesList');
+          tablesList.innerHTML = '';  // Clear any existing content
+
+          // Display the fetched tables in the HTML
+          tables.forEach((table) => {
+  const listItem = document.createElement('button');
+  listItem.textContent = table; // Assuming each table has a 'tableName' field
+  listItem.classList.add('table-btn');  // Add the class to the button
+
+  // Add an event listener to call a function when the button is clicked
+  listItem.addEventListener('click', () => {
+    handleTableClick(table); // Call the function with the table name as an argument
+  });
+
+  tablesList.appendChild(listItem);
+});
+
+        } else {
+          alert('Error fetching tables!');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error fetching tables!');
+      }
+    }
+
+    // Show the table creation form
+    function showTableForm() {
+      document.getElementById('createTableForm').style.display = 'block';
+    }
+
+    // Hide the table creation form
+    function cancelCreateTable() {
+      document.getElementById('createTableForm').style.display = 'none';
+    }
+
+    // Add a new field input
+    function addField() {
+      fieldCount++;
+
+      const fieldsContainer = document.getElementById('fieldsContainer');
+      const newFieldHTML = `
+        <div class="form-group">
+          <label for="fieldName${fieldCount}">Field ${fieldCount} Name</label>
+          <input type="text" class="fieldName" id="fieldName${fieldCount}" placeholder="Enter field name">
+          
+          <label for="fieldType${fieldCount}">Field ${fieldCount} Type</label>
+          <input type="text" class="fieldType" id="fieldType${fieldCount}" placeholder="Enter type">
+        </div>
+      `;
+      fieldsContainer.innerHTML += newFieldHTML;
+    }
+
+    // Create the table and fetch all tables after creation
+    async function createTable() {
+      const tableName = document.getElementById('tableName').value;
+      const fieldNames = document.querySelectorAll('.fieldName');
+      const fieldTypes = document.querySelectorAll('.fieldType');
+      let fieldArray = [];
+
+      // Collect field names and types
+      for (let i = 0; i < fieldNames.length; i++) {
+        const fieldName = fieldNames[i].value.trim();
+        const fieldType = fieldTypes[i].value.trim();
+        if (fieldName && fieldType) {
+          fieldArray.push({ fieldName, fieldType });
+        }
+      }
+
+      if (!tableName || fieldArray.length === 0) {
+        alert('Please provide a table name and at least one field!');
+        return;
+      }
+
+      // Prepare data to be sent to the API
+      const tableData = {
+        tableName,
+        fields: fieldArray
+      };
+
+      // Send API request to create the table
+      try {
+        // Make POST request to create the table
+        const response = await fetch('http://localhost:3000/table/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(tableData),
+        });
+
+        // If the POST request is successful, proceed
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Table created successfully:', data);
+
+          // After the table is created, fetch all tables again
+          fetchTables();
+        } else {
+          alert('Error creating table!');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error creating table!');
+      }
+
+      // Hide the form after creation
+      cancelCreateTable();
+    }
+  </script>
+</body>
+</html>
